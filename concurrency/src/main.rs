@@ -1,10 +1,14 @@
 use std::thread;
 use std::time::Duration;
+use std::sync::mpsc;
+
 
 fn main() {
     println!("Hello, world!");
     spawn_threads();
     moving_values();
+    channelling();
+    shared_state();
 }
 
 fn spawn_threads() {
@@ -33,3 +37,24 @@ fn moving_values() {
     handle.join().unwrap();
 }
 
+fn channelling() {
+    let (tx, rx) = mpsc::channel();
+    let tx1 = mpsc::Sender::clone(&tx);
+
+    thread::spawn(move || {
+        let val = String::from("hi");
+        tx.send(val).unwrap();
+    });
+    thread::spawn(move || {
+        let val = String::from("hi1");
+        tx1.send(val).unwrap();
+    });
+
+    for received in rx {
+        println!("Got {}", received)
+    }
+}
+
+fn shared_state() {
+
+}
