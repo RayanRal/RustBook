@@ -2,15 +2,26 @@ use std::net::{TcpListener, TcpStream};
 use std::io::{Read, Write};
 use std::{fs, thread};
 use std::time::Duration;
+use std::thread::Thread;
+use web_server::ThreadPool;
 
 fn main() {
     let addr = "127.0.0.1:7878";
     let listener = TcpListener::bind(addr).unwrap();
+    let pool: ThreadPool = match ThreadPool::new(5) {
+        Ok(pool) => pool,
+        Err(e) => panic!("Error creating pool")
+    };
 
-    for stream in listener.incoming() {
+    for stream in listener.incoming().take(2) {
         let stream = stream.unwrap();
-        handle_connection(stream);
+
+        pool.execute(|| {
+            handle_connection(stream);
+        });
     }
+
+    println!("Shutting down.");
 }
 
 fn handle_connection(mut stream: TcpStream) {
@@ -26,7 +37,6 @@ fn handle_connection(mut stream: TcpStream) {
         thread::sleep(Duration::from_secs(10));
         ("HTTP/1.1 200 OK\r\n", "./resources/hello.html")
     } else {
-        println!("Request: {}", String::from_utf8_lossy(&buffer[..]));
         ("HTTP/1.1 404 NOT FOUND\r\n", "./resources/404.html")
     };
 
